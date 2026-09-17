@@ -1,0 +1,157 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with role-based access control for NGO staff and donor auditors",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 255 },
+        "displayName": { "type": "string", "maxLength": 150 },
+        "photoURL": { "type": "string", "maxLength": 1000 },
+        "role": {
+          "type": "string",
+          "enum": ["ADMIN", "PROJECT_MANAGER", "ME_OFFICER", "FINANCE_OFFICER", "FIELD_OFFICER", "DONOR_AUDITOR"]
+        },
+        "organization": { "type": "string", "maxLength": 150 },
+        "assignedProjectIds": { "type": "array" },
+        "department": { "type": "string", "maxLength": 100 },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "email", "displayName", "role", "organization", "createdAt", "updatedAt"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Multi-donor funded humanitarian or development project",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "code": { "type": "string", "maxLength": 50 },
+        "title": { "type": "string", "maxLength": 250 },
+        "description": { "type": "string", "maxLength": 4000 },
+        "country": { "type": "string", "maxLength": 100 },
+        "location": { "type": "string", "maxLength": 150 },
+        "sector": {
+          "type": "string",
+          "enum": ["WASH", "HEALTH", "FOOD_SECURITY", "EDUCATION", "PROTECTION", "EMERGENCY_RELIEF", "ECONOMIC_DEVELOPMENT"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["PLANNING", "ACTIVE", "UNDER_REVIEW", "COMPLETED", "CLOSED"]
+        },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "donors": { "type": "array" },
+        "totalBudget": { "type": "number" },
+        "leadManagerId": { "type": "string", "maxLength": 128 },
+        "leadManagerName": { "type": "string", "maxLength": 150 },
+        "teamMemberIds": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "code", "title", "country", "sector", "status", "totalBudget", "leadManagerId", "createdAt", "updatedAt"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Tasks collection driving drag-and-drop Kanban board, offline field ops, and M&E auto-sync",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "projectId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "maxLength": 250 },
+        "description": { "type": "string", "maxLength": 4000 },
+        "status": {
+          "type": "string",
+          "enum": ["BACKLOG", "TODO", "IN_PROGRESS", "VERIFICATION", "COMPLETED"]
+        },
+        "assigneeId": { "type": "string", "maxLength": 128 },
+        "linkedIndicatorId": { "type": "string", "maxLength": 128 },
+        "plannedStartDate": { "type": "string" },
+        "plannedEndDate": { "type": "string" },
+        "actualEndDate": { "type": "string" },
+        "dependencies": { "type": "array" },
+        "fieldData": { "type": "object" },
+        "order": { "type": "number" },
+        "priority": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "URGENT"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "projectId", "title", "status", "assigneeId", "plannedStartDate", "plannedEndDate", "dependencies", "createdAt", "updatedAt"]
+    },
+    "Indicator": {
+      "title": "Indicator",
+      "description": "LogFrame metrics tracked quantitatively or qualitatively, auto-incremented on Task completion",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "projectId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "code": { "type": "string", "maxLength": 50 },
+        "title": { "type": "string", "maxLength": 250 },
+        "type": {
+          "type": "string",
+          "enum": ["QUANTITATIVE", "QUALITATIVE"]
+        },
+        "baseline": { "type": "number" },
+        "target": { "type": "number" },
+        "actualValue": { "type": "number" },
+        "disaggregations": { "type": "array" },
+        "autoSyncEnabled": { "type": "boolean" },
+        "unit": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "projectId", "code", "title", "type", "baseline", "target", "actualValue", "autoSyncEnabled", "createdAt", "updatedAt"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Multi-donor fractional cost splitting, Vertex AI risk extraction, and BVA modeling",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "projectId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "taskId": { "type": "string", "maxLength": 128 },
+        "submittedById": { "type": "string", "maxLength": 128 },
+        "approvedById": { "type": "string", "maxLength": 128 },
+        "status": {
+          "type": "string",
+          "enum": ["PENDING", "APPROVED", "REJECTED", "AUDITED"]
+        },
+        "totalAmount": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 10 },
+        "usdEquivalent": { "type": "number" },
+        "dateIncurred": { "type": "string" },
+        "description": { "type": "string", "maxLength": 2000 },
+        "donorAllocations": { "type": "array" },
+        "receiptUris": { "type": "array" },
+        "aiRiskFlags": { "type": "object" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "projectId", "submittedById", "status", "totalAmount", "currency", "usdEquivalent", "dateIncurred", "description", "donorAllocations", "receiptUris", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles with role permissions and organization association"
+    },
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Humanitarian and development projects with donor grant breakdowns"
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Kanban board tasks with linkedIndicatorId for auto-sync"
+    },
+    "/indicators/{indicatorId}": {
+      "schema": "Indicator",
+      "description": "LogFrame M&E quantitative indicators with auto-sync"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Expenses with multi-donor fractional cost splitting and AI risk flags"
+    }
+  }
+}

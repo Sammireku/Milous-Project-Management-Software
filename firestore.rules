@@ -1,0 +1,191 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // Helper Functions
+    // ==========================================
+
+    // Returns true if the user is authenticated via Firebase Auth
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Returns true if the requesting user's UID matches the specified userId
+    function isUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Safely retrieves the requesting user's document from the /users collection
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Fetches the user's role from their /users/{userId} document
+    function getUserRole() {
+      return isAuthenticated() ? getUserData().role : null;
+    }
+
+    // Role check helper functions
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'ADMIN';
+    }
+
+    function isProjectManager() {
+      return isAuthenticated() && getUserRole() == 'PROJECT_MANAGER';
+    }
+
+    function isMEOfficer() {
+      return isAuthenticated() && getUserRole() == 'ME_OFFICER';
+    }
+
+    function isFinanceOfficer() {
+      return isAuthenticated() && getUserRole() == 'FINANCE_OFFICER';
+    }
+
+    function isFieldOfficer() {
+      return isAuthenticated() && getUserRole() == 'FIELD_OFFICER';
+    }
+
+    function isDonorAuditor() {
+      return isAuthenticated() && getUserRole() == 'DONOR_AUDITOR';
+    }
+
+    // Data validation helper function for Task status lifecycle
+    function isValidTaskStatus(status) {
+      return status in ['BACKLOG', 'TODO', 'IN_PROGRESS', 'VERIFICATION', 'COMPLETED'];
+    }
+
+    // ==========================================
+    // 1. Users Collection (/users/{userId})
+    // ==========================================
+    match /users/{userId} {
+      // Users can read their own document; Admins and Managers can read profiles for team management
+      allow read: if isAuthenticated() && (
+        isUser(userId) || 
+        isAdmin() || 
+        isProjectManager() || 
+        isMEOfficer() || 
+        isFinanceOfficer() || 
+        isFieldOfficer()
+      );
+
+      // Account creation: Users can create their initial profile document
+      allow create: if isAuthenticated() && (
+        isAdmin() || 
+        (isUser(userId) && request.resource.data.role == 'FIELD_OFFICER')
+      );
+
+      // Profile updates: Users can edit personal information, but ONLY Admins can modify the 'role' field
+      allow update: if isAuthenticated() && (
+        isAdmin() || 
+        (isUser(userId) && request.resource.data.role == resource.data.role)
+      );
+
+      // Only Admins can delete user documents
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 2. Projects Collection (/projects/{projectId})
+    // ==========================================
+    match /projects/{projectId} {
+      // Authenticated staff and auditors can view active projects
+      allow read: if isAuthenticated();
+
+      // Project Managers and Admins can create, update, or close projects
+      allow create, update, delete: if isAuthenticated() && (isAdmin() || isProjectManager());
+    }
+
+    // ==========================================
+    // 3. Tasks Collection (/tasks/{taskId})
+    // ==========================================
+    match /tasks/{taskId} {
+      // Helper to validate task data on create and update
+      function isValidTaskPayload() {
+        return isValidTaskStatus(request.resource.data.status);
+      }
+
+      // Read rules:
+      // - Admins, Project Managers, M&E Officers, and Finance Officers can read all project tasks.
+      // - Field Officers can read tasks assigned to them.
+      allow read: if isAuthenticated() && (
+        isAdmin() || 
+        isProjectManager() || 
+        isMEOfficer() || 
+        isFinanceOfficer() || 
+        (isFieldOfficer() && (resource == null || resource.data.assigneeId == request.auth.uid))
+      );
+
+      // Create rules: Admins and Project Managers can create tasks with valid status
+      allow create: if isAuthenticated() && (
+        isAdmin() || isProjectManager()
+      ) && isValidTaskPayload();
+
+      // Update rules:
+      // - Field Officers can ONLY update tasks assigned to them (e.g. dragging kanban status, adding field notes)
+      // - Project Managers and Admins can update all tasks in their projects
+      // - Status MUST strictly adhere to allowed enum values
+      allow update: if isAuthenticated() && (
+        isAdmin() || 
+        isProjectManager() || 
+        (isFieldOfficer() && resource.data.assigneeId == request.auth.uid)
+      ) && isValidTaskPayload();
+
+      // Delete rules: Admins and Project Managers
+      allow delete: if isAuthenticated() && (isAdmin() || isProjectManager());
+    }
+
+    // ==========================================
+    // 4. Indicators Collection (/indicators/{indicatorId})
+    // ==========================================
+    match /indicators/{indicatorId} {
+      // Only M&E Officers and Admins can create/update/delete.
+      // Everyone else (except External Donor Auditors) is read-only.
+      allow read: if isAuthenticated() && !isDonorAuditor();
+
+      allow create, update, delete: if isAuthenticated() && (
+        isAdmin() || isMEOfficer()
+      );
+    }
+
+    // ==========================================
+    // 5. Expenses Collection (/expenses/{expenseId})
+    // ==========================================
+    match /expenses/{expenseId} {
+      // Finance Officers and Admins have full read/write access.
+      // Field Officers can ONLY create pending expenses and read their own.
+      // Project Managers can view expenses for BVA tracking.
+      allow read: if isAuthenticated() && (
+        isAdmin() || 
+        isFinanceOfficer() || 
+        isProjectManager() || 
+        (isFieldOfficer() && (resource == null || resource.data.submittedById == request.auth.uid))
+      );
+
+      allow create: if isAuthenticated() && (
+        isAdmin() || 
+        isFinanceOfficer() || 
+        (
+          isFieldOfficer() && 
+          request.resource.data.submittedById == request.auth.uid && 
+          request.resource.data.status == 'PENDING'
+        )
+      );
+
+      allow update, delete: if isAuthenticated() && (
+        isAdmin() || isFinanceOfficer()
+      );
+    }
+
+    // ==========================================
+    // 6. Project Risks Collection (/project_risks/{riskId})
+    // ==========================================
+    match /project_risks/{riskId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated() && (
+        isAdmin() || isProjectManager() || isMEOfficer()
+      );
+    }
+  }
+}

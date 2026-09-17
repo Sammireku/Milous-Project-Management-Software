@@ -1,0 +1,6 @@
+{
+  "name": "Milous Project",
+  "description": "Enterprise-grade NGO Project Management Web Application with donor compliance, M&E tracking, and AI risk analysis.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
