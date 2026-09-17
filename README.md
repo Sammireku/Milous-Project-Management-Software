@@ -112,27 +112,77 @@ Built with **React 19**, **TypeScript**, **Tailwind CSS**, **Recharts**, **Fireb
 
 ---
 
-## 📦 Deployment
+## 📦 Deployment & CI/CD Pipelines
 
-### Production Build
-To create a production-ready bundle with bundled CommonJS backend (`dist/server.cjs`):
+### 🛠️ Production Build & Run Locally
+To create a local production-ready bundle with bundled CommonJS backend (`dist/server.cjs`):
 ```bash
 npm run build
-```
-
-### Start Production Server
-```bash
 npm start
 ```
 
-### Deploying to Render
-1. Create a **New Web Service** on [Render](https://render.com/).
-2. Connect your GitHub repository.
-3. Set the build configuration:
-   - **Runtime:** `Node`
-   - **Build Command:** `npm run build`
-   - **Start Command:** `npm start`
-4. Under **Environment Variables**, add `GEMINI_API_KEY` and any custom `VITE_FIREBASE_*` keys.
+---
+
+### 🚀 1. Deploying to Render (Troubleshooting & Fixes)
+If your Render build fails, it is usually because Render sets `NODE_ENV=production` by default before installing dependencies, which skips **`devDependencies`** (such as `esbuild` and `typescript` required by the `npm run build` step).
+
+To fix this, configure the following settings in your **Render Web Service Dashboard**:
+
+1. **Environment Settings**:
+   - **Runtime**: `Node`
+   - **Build Command**: `npm run build`
+   - **Start Command**: `npm start`
+2. **Environment Variables**:
+   - `NPM_USE_PRODUCTION` = `false` *(Instructs Render to install devDependencies for compilation)*
+   - `GEMINI_API_KEY` = `your_gemini_api_key_here`
+   - `PORT` = `3000` *(Render binds dynamically, process.env.PORT handles this)*
+
+---
+
+### 🐙 2. CI/CD with GitHub Actions (Firebase Hosting)
+Milous Project is configured with automated continuous integration and continuous deployment (CI/CD) pipelines using **GitHub Actions**.
+
+The workflows are located in `.github/workflows/`:
+1. **Pull Requests (Preview Channel)** (`firebase-hosting-pull-request.yml`):
+   - Triggers when a PR is opened or updated on the `main` branch.
+   - Runs linter, checks types (`npm run lint`), compiles the bundle, and deploys a live preview channel to Firebase Hosting with a 7-day expiration.
+2. **Branch Merges (Production Live)** (`firebase-hosting-merge.yml`):
+   - Triggers automatically when code is pushed or merged into `main`.
+   - Compiles production assets and deploys them to the Firebase production site (`live` channel), as well as deploying Security Rules (`firestore.rules`) and associated Cloud Functions.
+
+---
+
+### 🔑 3. Secrets Management (GitHub Secrets Configuration)
+To enable the GitHub Actions pipelines, navigate to your GitHub Repository -> **Settings** -> **Secrets and variables** -> **Actions** and add the following:
+
+#### Required Github Secrets:
+- **`FIREBASE_SERVICE_ACCOUNT_MILOUS_PROJECT`**: The Firebase service account key in JSON format (generate this from the Firebase Console under Project Settings -> Service Accounts).
+- **`FIREBASE_TOKEN`**: OAuth authentication token for the Firebase CLI (generate using `firebase login:ci`).
+- **`VITE_FIREBASE_API_KEY`**: Web API key.
+- **`VITE_FIREBASE_AUTH_DOMAIN`**: Auth domain URI.
+- **`VITE_FIREBASE_PROJECT_ID`**: Firebase project ID.
+- **`VITE_FIREBASE_STORAGE_BUCKET`**: Storage bucket URI.
+- **`VITE_FIREBASE_MESSAGING_SENDER_ID`**: Project sender ID.
+- **`VITE_FIREBASE_APP_ID`**: Firebase web App ID.
+
+---
+
+## 📊 BigQuery Data Analytics Transformation
+
+To generate institutional reports for donors and interactive **Looker Studio** dashboards, the raw Firestore JSON documents are streamed into BigQuery (using the *Stream Firestore to BigQuery* extension). 
+
+The SQL view definitions located in `/bigquery/bigquery_views.sql` flatten and transform this raw nested JSON into clear, high-performance structured analytical schemas:
+
+1. **`vw_expenses_bva` (Budget vs Actuals)**:
+   - Unnests fractional cost percentages and line allocations across different funding partners (USAID, EU, UNHCR, Global Fund) for real-time burn rate reports.
+2. **`vw_indicators_progress` (M&E LogFrame Targets)**:
+   - Parses baseline, target, and actual measurements, dynamically calculating indicator achievements without division-by-zero risks (`SAFE_DIVIDE`).
+3. **`vw_timesheets_labor` (Field Labor Allocation)**:
+   - Tracks hours logged by field personnel across programs and sub-activities to analyze cost distributions.
+4. **`vw_project_financial_summary` (Portfolio Level Status)**:
+   - Consolidates project metadata, locations, sectors, and allocated budgets into high-level KPI card charts.
+
+For optimization and detailed Looker connection guides, see the [BigQuery Analytics Guide](./bigquery/README.md).
 
 ---
 
