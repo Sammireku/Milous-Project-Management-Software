@@ -39,8 +39,10 @@ import {
   Wrench,
   Boxes,
   FileText,
-  GraduationCap
+  GraduationCap,
+  Target
 } from 'lucide-react';
+import { GuidedTour } from './common/GuidedTour';
 import { useAuth } from '../context/AuthContext';
 import { useFirestore } from '../context/FirestoreContext';
 import { NotificationToast } from './common/NotificationToast';
@@ -168,6 +170,110 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="flex-1 overflow-y-auto px-2 py-2.5 space-y-3">
           {/* Quick Access Items */}
           <div className="space-y-0.5">
+            {/* Dashboard */}
+            <NavLink
+              to="/"
+              id="nav-dashboard"
+              className={({ isActive }) =>
+                `flex items-center ${
+                  isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'
+                } rounded-lg text-xs font-bold transition-colors ${
+                  isActive ? 'bg-emerald-600/20 text-emerald-300' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`
+              }
+              title="Executive Dashboard"
+            >
+              <div className="flex items-center space-x-2.5">
+                <LayoutDashboard className="w-4 h-4 text-emerald-400" />
+                {!isCollapsed && <span>Dashboard</span>}
+              </div>
+            </NavLink>
+
+            {/* AI Document Hub */}
+            <NavLink
+              to="/doc-hub"
+              id="nav-documents"
+              className={({ isActive }) =>
+                `flex items-center ${
+                  isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'
+                } rounded-lg text-xs font-bold transition-all ${
+                  isActive 
+                    ? 'bg-emerald-600/20 text-emerald-300' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`
+              }
+              title="AI Document Hub: RAG & Report Generator"
+            >
+              <div className="flex items-center space-x-2.5">
+                <FileText className="w-4 h-4 text-amber-400" />
+                {!isCollapsed && <span>Document Hub</span>}
+              </div>
+              {!isCollapsed && (
+                <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
+                  RAG
+                </span>
+              )}
+            </NavLink>
+
+            {/* Financial Suite */}
+            <NavLink
+              to="/financials"
+              id="nav-financials"
+              className={({ isActive }) =>
+                `flex items-center ${
+                  isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'
+                } rounded-lg text-xs font-medium transition-colors ${
+                  isActive ? 'bg-emerald-600/20 text-emerald-300 font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`
+              }
+              title="Multi-Donor Fractional Ledger"
+            >
+              <div className="flex items-center space-x-2.5">
+                <DollarSign className="w-4 h-4 text-emerald-400" />
+                {!isCollapsed && <span>Financial Ledger</span>}
+              </div>
+            </NavLink>
+
+            {/* M&E Logical Framework Indicators */}
+            <NavLink
+              to="/me-indicators"
+              id="nav-indicators"
+              className={({ isActive }) =>
+                `flex items-center ${
+                  isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'
+                } rounded-lg text-xs font-medium transition-colors ${
+                  isActive ? 'bg-emerald-600/20 text-emerald-300 font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`
+              }
+              title="M&E Frame & Live Sync Metrics"
+            >
+              <div className="flex items-center space-x-2.5">
+                <Target className="w-4 h-4 text-rose-400" />
+                {!isCollapsed && <span>M&amp;E Indicators</span>}
+              </div>
+            </NavLink>
+
+            {/* To-do List (Kanban) */}
+            <NavLink
+              to="/my-todo"
+              id="nav-tasks"
+              className={({ isActive }) =>
+                `flex items-center ${
+                  isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'
+                } rounded-lg text-xs font-medium transition-colors ${
+                  isActive ? 'bg-emerald-600/20 text-emerald-300 font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`
+              }
+              title="Kanban Tasks Coordination"
+            >
+              <div className="flex items-center space-x-2.5">
+                <FolderKanban className="w-4 h-4 text-blue-400" />
+                {!isCollapsed && <span>Kanban Tasks</span>}
+              </div>
+            </NavLink>
+
+            <div className="h-px bg-slate-800/40 my-2" />
+
             {/* Search */}
             <button
               onClick={() => setCommandPaletteOpen(true)}
@@ -773,6 +879,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         />
         <NotificationToast />
         <OfflineIndicator />
+        <GuidedTour />
       </div>
     </div>
   );

@@ -414,7 +414,7 @@ export const ExpensesView: React.FC = () => {
       />
 
       {/* Top BVA & Compliance Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div id="donor-allocator-card" className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {(() => {
           const symbol = selectedDisplayCurrency === 'GHS' ? 'GH₵' : selectedDisplayCurrency === 'EUR' ? '€' : selectedDisplayCurrency === 'GBP' ? '£' : '$';
           
@@ -533,7 +533,7 @@ export const ExpensesView: React.FC = () => {
       />
 
       {/* Expense List */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+      <div id="fiduciary-audit-card" className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="divide-y divide-slate-100">
           {filteredExpenses.map((expense) => {
             const isApproved = expense.status === 'APPROVED';

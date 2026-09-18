@@ -24,7 +24,8 @@ import {
   UserCheck, 
   HelpCircle,
   FileCheck,
-  Edit3
+  Edit3,
+  Upload
 } from 'lucide-react';
 import { logAuditEvent } from '../../lib/auditLogger';
 import { GoogleFormsSurveyManager } from '../documents/GoogleFormsSurveyManager';
@@ -74,7 +75,98 @@ export const DocumentHubView: React.FC = () => {
   const [copiedNotification, setCopiedNotification] = useState(false);
 
   // Tab state in Inspector panel
-  const [inspectorTab, setInspectorTab] = useState<'config' | 'rag_context' | 'audit'>('config');
+  const [inspectorTab, setInspectorTab] = useState<'config' | 'rag_context' | 'audit' | 'summarizer'>('config');
+
+  // Document Summarizer State
+  interface UploadedDoc {
+    id: string;
+    name: string;
+    size: string;
+    uploadedAt: string;
+    textContext?: string;
+  }
+
+  const [uploadedDocs, setUploadedDocs] = useState<UploadedDoc[]>([
+    {
+      id: 'doc-1',
+      name: 'USAID_BHA_Solar_WASH_Grant_Agreement_Signed.pdf',
+      size: '2.4 MB',
+      uploadedAt: '2026-09-01 10:24',
+      textContext: 'This Grant Agreement details the expansion of 8 deep solar-powered boreholes across the Ashanti and Northern Regions, incorporating water treatment kiosks and IoT chlorination telemetry under USAID BHA guidelines. The total disbursed amount of $420,000 supports inception surveys and civil works, ensuring full compliance with 2 CFR 200 uniform guidance and environmental mitigation audits.',
+    },
+    {
+      id: 'doc-2',
+      name: 'ECHO_Single_Form_Submission_Draft.pdf',
+      size: '1.8 MB',
+      uploadedAt: '2026-09-05 14:15',
+      textContext: 'This Single Form Submission draft outlines emergency drought response measures for West Africa under EU ECHO guidelines, targeting 12,000 displaced pastoralist families. The proposal details supplementary nutrition distributions, emergency water trucking voucher schemes, and rapid baseline survey registrations scheduled for implementation across cross-border communities.',
+    },
+    {
+      id: 'doc-3',
+      name: 'Field_Borehole_Inspection_Report_v2.pdf',
+      size: '3.1 MB',
+      uploadedAt: '2026-09-10 09:30',
+      textContext: 'This technical report verifies the physical and hydraulic status of drilling sites, confirming compliance at a 45m piping depth with solar inverter installation. It details water quality tests, pressure gauge calibrations, and solar inverter serial number mapping to the official USAID grant register GH-882.',
+    },
+    {
+      id: 'doc-4',
+      name: 'UNHCR_Audit_Brief.docx',
+      size: '1.2 MB',
+      uploadedAt: '2026-09-12 11:45',
+      textContext: 'This audit brief summarizes compliance standards and financial reconciliations for refugees and displaced persons across cross-border water networks. It highlights the allocation of sub-grants, operational efficiency audits, and beneficiary feedback loops for water point utilization.',
+    },
+  ]);
+  const [selectedDocId, setSelectedDocId] = useState<string>('doc-1');
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [docSummary, setDocSummary] = useState<string>('');
+
+  const handleDocUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const newDoc: UploadedDoc = {
+      id: `doc-${Date.now()}`,
+      name: file.name,
+      size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+      uploadedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      textContext: `This is an uploaded custom document named "${file.name}". It contains specific project metrics, site survey information, and implementation data for the ${activeProject?.title || 'WASH Initiative'} project.`,
+    };
+
+    setUploadedDocs((prev) => [...prev, newDoc]);
+    setSelectedDocId(newDoc.id);
+    setDocSummary('');
+  };
+
+  const handleSummarizeDoc = async () => {
+    const doc = uploadedDocs.find((d) => d.id === selectedDocId);
+    if (!doc) return;
+
+    setIsSummarizing(true);
+    setDocSummary('');
+    try {
+      const res = await fetch('/api/ai/summarize-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documentName: doc.name,
+          documentText: doc.textContext,
+          projectName: activeProject?.title,
+          projectCode: activeProject?.code,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDocSummary(data.summary);
+      } else {
+        setDocSummary(`Failed to summarize: ${data.error}`);
+      }
+    } catch (err) {
+      console.error(err);
+      setDocSummary('Error communicating with the summarizer service.');
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
 
   // Calculate grounded stats for preview
   const completedTasks = tasks.filter((t) => t.status === 'COMPLETED');
@@ -442,36 +534,46 @@ export const DocumentHubView: React.FC = () => {
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
             {/* Inspector Navigation Tabs */}
-            <div className="flex border-b border-slate-200 bg-slate-50/80 p-1.5 gap-1 text-xs font-bold">
+            <div className="grid grid-cols-2 gap-1 p-2 bg-slate-50/80 border-b border-slate-200 text-xs font-bold">
               <button
                 type="button"
                 onClick={() => setInspectorTab('config')}
-                className={`flex-1 py-2 px-3 rounded-xl transition flex items-center justify-center space-x-1.5 ${
-                  inspectorTab === 'config' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                className={`py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1 ${
+                  inspectorTab === 'config' ? 'bg-white text-slate-900 shadow-xs border border-slate-200/50' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Sliders className="w-3.5 h-3.5" />
+                <Sliders className="w-3.5 h-3.5 text-indigo-500" />
                 <span>1. RAG Wizard</span>
               </button>
               <button
                 type="button"
                 onClick={() => setInspectorTab('rag_context')}
-                className={`flex-1 py-2 px-3 rounded-xl transition flex items-center justify-center space-x-1.5 ${
-                  inspectorTab === 'rag_context' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                className={`py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1 ${
+                  inspectorTab === 'rag_context' ? 'bg-white text-slate-900 shadow-xs border border-slate-200/50' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Database className="w-3.5 h-3.5 text-indigo-600" />
-                <span>2. DB Grounding ({completedTasks.length} tasks)</span>
+                <Database className="w-3.5 h-3.5 text-blue-600" />
+                <span>2. Grounding</span>
               </button>
               <button
                 type="button"
                 onClick={() => setInspectorTab('audit')}
-                className={`flex-1 py-2 px-3 rounded-xl transition flex items-center justify-center space-x-1.5 ${
-                  inspectorTab === 'audit' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                className={`py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1 ${
+                  inspectorTab === 'audit' ? 'bg-white text-slate-900 shadow-xs border border-slate-200/50' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                 <span>3. Sign-off</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setInspectorTab('summarizer')}
+                className={`py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1 ${
+                  inspectorTab === 'summarizer' ? 'bg-white text-slate-900 shadow-xs border border-slate-200/50' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                <span>4. Summarizer</span>
               </button>
             </div>
 
@@ -728,6 +830,100 @@ export const DocumentHubView: React.FC = () => {
                           {piiRedactions} sensitive personal records scrubbed prior to Gemini processing.
                         </p>
                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {inspectorTab === 'summarizer' && (
+                <div className="space-y-4">
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 space-y-1">
+                    <span className="font-bold block flex items-center space-x-1 text-xs">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                      <span>Document Summary Co-Pilot</span>
+                    </span>
+                    <p className="text-[11px] text-amber-700 font-semibold">
+                      Select or upload any project document to generate a high-integrity, single-paragraph AI summary powered by Gemini.
+                    </p>
+                  </div>
+
+                  {/* Document selector/uploader */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Select Project Document</label>
+                      <select
+                        value={selectedDocId}
+                        onChange={(e) => {
+                          setSelectedDocId(e.target.value);
+                          setDocSummary('');
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
+                      >
+                        {uploadedDocs.map((doc) => (
+                          <option key={doc.id} value={doc.id}>
+                            📄 {doc.name} ({doc.size})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Upload File Input */}
+                    <div>
+                      <label className="w-full py-2 px-3 border border-dashed border-slate-300 hover:border-amber-400 hover:bg-amber-50/20 rounded-xl text-center text-xs font-bold text-slate-600 cursor-pointer transition flex items-center justify-center space-x-1.5">
+                        <Upload className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Upload New Document</span>
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.txt"
+                          onChange={handleDocUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSummarizeDoc}
+                    disabled={isSummarizing || !selectedDocId}
+                    className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center space-x-2 transition disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSummarizing ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                        <span>Generating Gemini Summary...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Summarize Selected Document</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Summary Result Box */}
+                  {docSummary && (
+                    <div className="p-4 bg-amber-50/20 border border-amber-200 rounded-2xl space-y-2 text-xs animate-in fade-in zoom-in-95 duration-200">
+                      <div className="flex items-center justify-between border-b border-amber-200/50 pb-1.5">
+                        <span className="font-bold text-slate-800 flex items-center space-x-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Gemini AI Summary</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(docSummary);
+                            alert('Summary copied to clipboard!');
+                          }}
+                          className="text-[10px] text-slate-500 hover:text-slate-800 font-bold flex items-center space-x-1"
+                        >
+                          <Copy className="w-3 h-3" />
+                          <span>Copy</span>
+                        </button>
+                      </div>
+                      <p className="text-slate-700 leading-relaxed font-semibold bg-white p-3 rounded-xl border border-slate-100 text-[11px] italic">
+                        "{docSummary}"
+                      </p>
                     </div>
                   )}
                 </div>
